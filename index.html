@@ -14,6 +14,8 @@
       --accent: #e8ff6a;
       --accent-ink: #14180a;
       --good: #7dffb3;
+      --amazon: #ff9900;
+      --walmart: #0071ce;
     }
     * { box-sizing: border-box; }
     body {
@@ -24,10 +26,24 @@
       min-height: 100vh;
     }
     .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 80px; }
-    header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 18px; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
     .logo { font-weight: 800; letter-spacing: -0.04em; font-size: 28px; }
     .logo span { color: var(--accent); }
-    .tag { color: var(--muted); font-size: 14px; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .cta {
+      border: 1px solid var(--line);
+      background: #1a2028;
+      color: var(--ink);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .cta.amazon { background: var(--amazon); color: #111; border-color: var(--amazon); }
+    .cta.walmart { background: var(--walmart); color: #fff; border-color: var(--walmart); }
+    .cta.ghost { background: transparent; color: var(--muted); }
+    .cta.on { box-shadow: 0 0 0 2px #fff3 inset; }
     .hero {
       background: linear-gradient(180deg, #1a2028, #12161c);
       border: 1px solid var(--line);
@@ -85,7 +101,23 @@
       border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600;
     }
     .buy.primary { background: var(--good); color: #062416; border-color: var(--good); }
+    .buy.amazon-p { background: var(--amazon); color: #111; border-color: var(--amazon); }
+    .buy.walmart-p { background: var(--walmart); color: #fff; border-color: var(--walmart); }
     .note { color: var(--muted); font-size: 13px; margin-top: 18px; line-height: 1.5; }
+    .overlay {
+      position: fixed; inset: 0; background: #0008; display: none;
+      align-items: center; justify-content: center; padding: 20px; z-index: 20;
+    }
+    .overlay.show { display: flex; }
+    .modal {
+      background: #161b22; border: 1px solid var(--line); border-radius: 20px;
+      max-width: 440px; width: 100%; padding: 22px;
+    }
+    .modal h3 { margin: 0 0 8px; font-size: 20px; }
+    .modal p { color: var(--muted); margin: 0 0 14px; line-height: 1.5; font-size: 14px; }
+    .perms { margin: 0 0 16px; padding: 0; list-style: none; font-size: 14px; }
+    .perms li { padding: 6px 0; border-bottom: 1px solid var(--line); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
     @media (max-width: 720px) {
       .steps { grid-template-columns: 1fr; }
       h1 { font-size: 24px; }
@@ -96,16 +128,19 @@
   <div class="wrap">
     <header>
       <div class="logo">wish<span>it</span></div>
-      <div class="tag">Pick 3. AI finds it. Buy faster.</div>
+      <div class="header-actions" id="accounts">
+        <button class="cta amazon" id="btnAmazon" type="button">Connect your Amazon account</button>
+        <button class="cta walmart" id="btnWalmart" type="button">Connect your Walmart account?</button>
+      </div>
     </header>
 
     <section class="hero">
-      <h1>A-Z list. Three clicks. Straight to checkout.</h1>
-      <p>Not another infinite feed. Choose three things you actually want. wishit matches live retail listings and sends you to the buy button — less clutter for you, cleaner intent for stores.</p>
+      <h1>A-Z list. Three clicks. Straight to their checkout.</h1>
+      <p>Connect a store for faster routing — identity and zip only. wishit never holds your cart, card, or password. Retailers keep the sale. You skip the clutter.</p>
       <div class="steps">
-        <div class="step"><b>1. Pick</b> Tap 3 items from the A–Z list.</div>
-        <div class="step"><b>2. Find</b> AI maps each pick to real products.</div>
-        <div class="step"><b>3. Trigger</b> One tap opens retailer buy pages.</div>
+        <div class="step"><b>1. Connect</b> Amazon, Walmart, or both.</div>
+        <div class="step"><b>2. Pick 3</b> from the A–Z list.</div>
+        <div class="step"><b>3. Buy faster</b> on the store you already use.</div>
       </div>
     </section>
 
@@ -122,7 +157,11 @@
     </div>
 
     <section class="results" id="results"></section>
-    <p class="note">Prototype note: this demo does not scrape retailer pages or add items to your personal cart. It builds high-intent search / product links so you can buy on Amazon, Walmart, Target, or Best Buy in one jump. That’s the “retailers should embrace it” pitch: you send them a shopper who already decided.</p>
+    <p class="note">Prototype: Connect buttons are a local demo (saved in this browser). Real Amazon uses Login with Amazon — name, email, postal code. Real Walmart uses affiliate + zip for pickup/delivery, not cart write-access. Checkout always happens on the retailer.</p>
+  </div>
+
+  <div class="overlay" id="overlay">
+    <div class="modal" id="modal"></div>
   </div>
 
   <script>
@@ -162,8 +201,68 @@
     const results = document.getElementById("results");
     const nEl = document.getElementById("n");
     const showing = document.getElementById("showing");
+    const overlay = document.getElementById("overlay");
+    const modal = document.getElementById("modal");
+    const btnAmazon = document.getElementById("btnAmazon");
+    const btnWalmart = document.getElementById("btnWalmart");
+
     let activeLetter = "ALL";
     let selected = [];
+    let accounts = JSON.parse(localStorage.getItem("wishit.accounts") || '{"amazon":false,"walmart":false}');
+
+    const COPY = {
+      amazon: {
+        title: "Connect your Amazon account",
+        body: "Official path is Login with Amazon. wishit can use your name, email, and zip to route you to the right product page. Amazon keeps the cart, Prime, and payment.",
+        allow: "You allow: sign-in identity and postal code.",
+        deny: "You do not allow: cart, orders, wishlist, or cards."
+      },
+      walmart: {
+        title: "Connect your Walmart account?",
+        body: "Walmart is hungrier for this traffic. A connection here is for store pickup, local stock, and Walmart+ routing — not so wishit can check out for you.",
+        allow: "You allow: preferred store / zip and faster Walmart links.",
+        deny: "You do not allow: cart write, payment, or password."
+      }
+    };
+
+    function saveAccounts() {
+      localStorage.setItem("wishit.accounts", JSON.stringify(accounts));
+      renderAccounts();
+    }
+
+    function renderAccounts() {
+      btnAmazon.textContent = accounts.amazon ? "Amazon connected" : "Connect your Amazon account";
+      btnWalmart.textContent = accounts.walmart ? "Walmart connected" : "Connect your Walmart account?";
+      btnAmazon.classList.toggle("on", accounts.amazon);
+      btnWalmart.classList.toggle("on", accounts.walmart);
+    }
+
+    function openConnect(kind) {
+      const c = COPY[kind];
+      const connected = accounts[kind];
+      modal.innerHTML = `
+        <h3>${connected ? (kind === "amazon" ? "Amazon is connected" : "Walmart is connected") : c.title}</h3>
+        <p>${c.body}</p>
+        <ul class="perms">
+          <li>${c.allow}</li>
+          <li>${c.deny}</li>
+        </ul>
+        <div class="modal-actions">
+          <button class="cta ghost" id="modalCancel" type="button">${connected ? "Close" : "Not now"}</button>
+          <button class="cta ${kind}" id="modalOk" type="button">${connected ? "Disconnect" : "Connect"}</button>
+        </div>`;
+      overlay.classList.add("show");
+      document.getElementById("modalCancel").onclick = () => overlay.classList.remove("show");
+      document.getElementById("modalOk").onclick = () => {
+        accounts[kind] = !connected;
+        saveAccounts();
+        overlay.classList.remove("show");
+      };
+    }
+
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("show"); });
+    btnAmazon.onclick = () => openConnect("amazon");
+    btnWalmart.onclick = () => openConnect("walmart");
 
     letters.forEach(L => {
       const b = document.createElement("button");
@@ -204,28 +303,35 @@
     function q(s) { return encodeURIComponent(s); }
     function links(name) {
       return [
-        ["Amazon", `https://www.amazon.com/s?k=${q(name)}`, true],
-        ["Walmart", `https://www.walmart.com/search?q=${q(name)}`, false],
-        ["Target", `https://www.target.com/s?searchTerm=${q(name)}`, false],
-        ["Best Buy", `https://www.bestbuy.com/site/searchpage.jsp?st=${q(name)}`, false]
+        { label: "Amazon", href: `https://www.amazon.com/s?k=${q(name)}`, key: "amazon" },
+        { label: "Walmart", href: `https://www.walmart.com/search?q=${q(name)}`, key: "walmart" },
+        { label: "Target", href: `https://www.target.com/s?searchTerm=${q(name)}`, key: "target" },
+        { label: "Best Buy", href: `https://www.bestbuy.com/site/searchpage.jsp?st=${q(name)}`, key: "bestbuy" }
       ];
     }
 
     findBtn.onclick = () => {
+      const any = accounts.amazon || accounts.walmart;
       results.classList.add("show");
-      results.innerHTML = `<h1 style="margin:8px 0 14px">AI found your 3</h1>` + selected.map((name, idx) => {
-        const buys = links(name).map(([label, href, primary]) =>
-          `<a class="buy${primary ? " primary" : ""}" href="${href}" target="_blank" rel="noopener">${primary ? "Buy faster · " : ""}${label}</a>`
-        ).join("");
-        return `<article class="card">
-          <h2>${idx+1}. ${name}</h2>
-          <p class="why">Matched to current retailer catalogs. Open a store to compare price, shipping, and add to your real cart there.</p>
-          <div class="buys">${buys}</div>
-        </article>`;
-      }).join("");
+      results.innerHTML = `<h1 style="margin:8px 0 14px">AI found your 3</h1>
+        <p class="why">${any ? "Connected stores are highlighted so you can buy faster there." : "No store connected yet — pick any retailer, or connect Amazon / Walmart above."}</p>` +
+        selected.map((name, idx) => {
+          const buys = links(name).map(l => {
+            const connected = accounts[l.key];
+            const cls = connected ? (l.key === "amazon" ? "amazon-p" : "walmart-p") : "";
+            const prefix = connected ? "Buy faster · " : "";
+            return `<a class="buy ${cls}" href="${l.href}" target="_blank" rel="noopener">${prefix}${l.label}</a>`;
+          }).join("");
+          return `<article class="card">
+            <h2>${idx+1}. ${name}</h2>
+            <p class="why">Open a store to compare price and shipping. Add to cart happens on their site, in your real account.</p>
+            <div class="buys">${buys}</div>
+          </article>`;
+        }).join("");
       results.scrollIntoView({ behavior: "smooth" });
     };
 
+    renderAccounts();
     renderAz();
     renderGrid();
   </script>
