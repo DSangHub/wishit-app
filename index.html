@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>wishit — pick 3, buy faster</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --card: #15191f;
+      --ink: #f4f1ea;
+      --muted: #9aa3ad;
+      --line: #2a313a;
+      --accent: #e8ff6a;
+      --accent-ink: #14180a;
+      --good: #7dffb3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #1b2430, var(--bg));
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 80px; }
+    header { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 18px; }
+    .logo { font-weight: 800; letter-spacing: -0.04em; font-size: 28px; }
+    .logo span { color: var(--accent); }
+    .tag { color: var(--muted); font-size: 14px; }
+    .hero {
+      background: linear-gradient(180deg, #1a2028, #12161c);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+    h1 { margin: 0 0 8px; font-size: 30px; letter-spacing: -0.03em; }
+    .hero p { margin: 0; color: var(--muted); line-height: 1.5; max-width: 62ch; }
+    .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 16px; }
+    .step { background: #0f1318; border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+    .step b { display: block; color: var(--accent); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+    .az { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 12px; }
+    .az button {
+      background: transparent; color: var(--muted); border: 1px solid var(--line);
+      width: 34px; height: 34px; border-radius: 10px; cursor: pointer; font-weight: 700;
+    }
+    .az button.active, .az button:hover { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+    .count { color: var(--muted); font-size: 14px; }
+    .count strong { color: var(--ink); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+    .item {
+      background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+      padding: 14px; cursor: pointer; min-height: 88px;
+    }
+    .item:hover { border-color: #4a5563; }
+    .item.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+    .item .letter { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+    .item h3 { margin: 4px 0 0; font-size: 16px; }
+    .dock {
+      position: sticky; bottom: 14px; margin-top: 18px;
+      background: #10141aee; backdrop-filter: blur(10px);
+      border: 1px solid var(--line); border-radius: 18px; padding: 12px;
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    .picks { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { background: #222831; border-radius: 999px; padding: 6px 10px; font-size: 13px; }
+    button.find {
+      background: var(--accent); color: var(--accent-ink); border: 0; font-weight: 800;
+      padding: 12px 16px; border-radius: 12px; cursor: pointer; white-space: nowrap;
+    }
+    button.find:disabled { opacity: 0.4; cursor: not-allowed; }
+    .results { margin-top: 22px; display: none; }
+    .results.show { display: block; }
+    .card {
+      background: var(--card); border: 1px solid var(--line); border-radius: 18px;
+      padding: 16px; margin-bottom: 12px;
+    }
+    .card h2 { margin: 0 0 6px; font-size: 20px; }
+    .why { color: var(--muted); font-size: 14px; margin: 0 0 12px; }
+    .buys { display: flex; flex-wrap: wrap; gap: 8px; }
+    .buy {
+      text-decoration: none; background: #222831; color: var(--ink);
+      border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14px; font-weight: 600;
+    }
+    .buy.primary { background: var(--good); color: #062416; border-color: var(--good); }
+    .note { color: var(--muted); font-size: 13px; margin-top: 18px; line-height: 1.5; }
+    @media (max-width: 720px) {
+      .steps { grid-template-columns: 1fr; }
+      h1 { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">wish<span>it</span></div>
+      <div class="tag">Pick 3. AI finds it. Buy faster.</div>
+    </header>
+
+    <section class="hero">
+      <h1>A-Z list. Three clicks. Straight to checkout.</h1>
+      <p>Not another infinite feed. Choose three things you actually want. wishit matches live retail listings and sends you to the buy button — less clutter for you, cleaner intent for stores.</p>
+      <div class="steps">
+        <div class="step"><b>1. Pick</b> Tap 3 items from the A–Z list.</div>
+        <div class="step"><b>2. Find</b> AI maps each pick to real products.</div>
+        <div class="step"><b>3. Trigger</b> One tap opens retailer buy pages.</div>
+      </div>
+    </section>
+
+    <div class="az" id="az"></div>
+    <div class="toolbar">
+      <div class="count">Showing <strong id="showing">all</strong> · selected <strong id="n">0</strong>/3</div>
+      <button class="az-reset" id="resetLetter" style="background:none;border:0;color:#9aa3ad;cursor:pointer;">Show all</button>
+    </div>
+    <div class="grid" id="grid"></div>
+
+    <div class="dock">
+      <div class="picks" id="picks"><span class="chip">Nothing selected yet</span></div>
+      <button class="find" id="find" disabled>Find these 3</button>
+    </div>
+
+    <section class="results" id="results"></section>
+    <p class="note">Prototype note: this demo does not scrape retailer pages or add items to your personal cart. It builds high-intent search / product links so you can buy on Amazon, Walmart, Target, or Best Buy in one jump. That’s the “retailers should embrace it” pitch: you send them a shopper who already decided.</p>
+  </div>
+
+  <script>
+    const ITEMS = [
+      ["Air fryer", "A"], ["AirPods / earbuds", "A"], ["Alarm clock", "A"],
+      ["Backpack", "B"], ["Blender", "B"], ["Bluetooth speaker", "B"],
+      ["Coffee maker", "C"], ["Camping tent", "C"], ["Cast iron skillet", "C"],
+      ["Desk chair", "D"], ["Desk lamp", "D"], ["Drill", "D"],
+      ["Electric toothbrush", "E"], ["External SSD", "E"],
+      ["Fitness tracker", "F"], ["French press", "F"],
+      ["Gaming headset", "G"], ["Guitar stand", "G"],
+      ["Headphones", "H"], ["Hiking boots", "H"],
+      ["Instant pot", "I"], ["iPad stand", "I"],
+      ["Jacket, rain", "J"], ["Jigsaw puzzle", "J"],
+      ["Keyboard, mechanical", "K"], ["Knife set", "K"],
+      ["Laptop sleeve", "L"], ["LED light strip", "L"],
+      ["Mattress topper", "M"], ["Monitor, 27-inch", "M"],
+      ["Noise machine", "N"], ["Nightstand", "N"],
+      ["Office desk", "O"], ["Outdoor grill", "O"],
+      ["Phone case", "P"], ["Power station", "P"],
+      ["Quilt / comforter", "Q"],
+      ["Robot vacuum", "R"], ["Running shoes", "R"],
+      ["Slow cooker", "S"], ["Standing desk", "S"],
+      ["TV, 55-inch", "T"], ["Toaster", "T"],
+      ["Umbrella, compact", "U"], ["USB-C hub", "U"],
+      ["Vacuum, cordless", "V"], ["Vitamin D", "V"],
+      ["Water bottle", "W"], ["Webcam", "W"],
+      ["Yoga mat", "Y"],
+      ["Air purifier", "A"], ["Bike lock", "B"], ["Portable charger", "P"]
+    ].sort((a,b) => a[0].localeCompare(b[0]));
+
+    const letters = [...new Set(ITEMS.map(i => i[1]))];
+    const az = document.getElementById("az");
+    const grid = document.getElementById("grid");
+    const picksEl = document.getElementById("picks");
+    const findBtn = document.getElementById("find");
+    const results = document.getElementById("results");
+    const nEl = document.getElementById("n");
+    const showing = document.getElementById("showing");
+    let activeLetter = "ALL";
+    let selected = [];
+
+    letters.forEach(L => {
+      const b = document.createElement("button");
+      b.textContent = L;
+      b.onclick = () => { activeLetter = L; renderAz(); renderGrid(); };
+      az.appendChild(b);
+    });
+
+    document.getElementById("resetLetter").onclick = () => { activeLetter = "ALL"; renderAz(); renderGrid(); };
+
+    function renderAz() {
+      [...az.children].forEach(b => b.classList.toggle("active", b.textContent === activeLetter));
+      showing.textContent = activeLetter === "ALL" ? "all" : activeLetter;
+    }
+
+    function renderGrid() {
+      grid.innerHTML = "";
+      ITEMS.filter(i => activeLetter === "ALL" || i[1] === activeLetter).forEach(([name, letter]) => {
+        const el = document.createElement("div");
+        el.className = "item" + (selected.includes(name) ? " selected" : "");
+        el.innerHTML = `<div class="letter">${letter}</div><h3>${name}</h3>`;
+        el.onclick = () => toggle(name);
+        grid.appendChild(el);
+      });
+    }
+
+    function toggle(name) {
+      if (selected.includes(name)) selected = selected.filter(x => x !== name);
+      else if (selected.length < 3) selected.push(name);
+      nEl.textContent = selected.length;
+      findBtn.disabled = selected.length !== 3;
+      picksEl.innerHTML = selected.length
+        ? selected.map(s => `<span class="chip">${s}</span>`).join("")
+        : `<span class="chip">Nothing selected yet</span>`;
+      renderGrid();
+    }
+
+    function q(s) { return encodeURIComponent(s); }
+    function links(name) {
+      return [
+        ["Amazon", `https://www.amazon.com/s?k=${q(name)}`, true],
+        ["Walmart", `https://www.walmart.com/search?q=${q(name)}`, false],
+        ["Target", `https://www.target.com/s?searchTerm=${q(name)}`, false],
+        ["Best Buy", `https://www.bestbuy.com/site/searchpage.jsp?st=${q(name)}`, false]
+      ];
+    }
+
+    findBtn.onclick = () => {
+      results.classList.add("show");
+      results.innerHTML = `<h1 style="margin:8px 0 14px">AI found your 3</h1>` + selected.map((name, idx) => {
+        const buys = links(name).map(([label, href, primary]) =>
+          `<a class="buy${primary ? " primary" : ""}" href="${href}" target="_blank" rel="noopener">${primary ? "Buy faster · " : ""}${label}</a>`
+        ).join("");
+        return `<article class="card">
+          <h2>${idx+1}. ${name}</h2>
+          <p class="why">Matched to current retailer catalogs. Open a store to compare price, shipping, and add to your real cart there.</p>
+          <div class="buys">${buys}</div>
+        </article>`;
+      }).join("");
+      results.scrollIntoView({ behavior: "smooth" });
+    };
+
+    renderAz();
+    renderGrid();
+  </script>
+</body>
+</html>
